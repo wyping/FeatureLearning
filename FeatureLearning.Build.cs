@@ -10,8 +10,8 @@ public class FeatureLearning : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[] {
+				"Core", "CoreUObject",
 				"AppFramework",
-				"Core",
 				"RenderCore",
 				"ApplicationCore",
 				"Projects",
@@ -19,7 +19,7 @@ public class FeatureLearning : ModuleRules
 				"SlateCore",
 				"StandaloneRenderer",
 				"SourceCodeAccess",
-				"WebBrowser",
+				"WebBrowser"
 			}
 		);
 
