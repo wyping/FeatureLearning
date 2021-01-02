@@ -8,8 +8,7 @@
 #include "ISlateReflectorModule.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SWindow.h"
-
-#include "Tab/SizeofTypeTab.h"
+#include "Tab/CommonWidget.h"
 
 void InitApp();
 TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args);
@@ -28,6 +27,7 @@ namespace WorkspaceMenu
 	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
 }
 
+FCommonWidget CommonWidget;
 
 int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
 {
@@ -102,7 +102,7 @@ TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
 		.Label(WorkspaceMenu::SizeofType->GetDisplayName())
 		.ToolTipText(LOCTEXT("TypeSizeof", "sizeof type"))
 		[
-			TestSizeofType::MakeWidget().ToSharedRef()
+			CommonWidget.MakeWidget().ToSharedRef()
 		];
 }
 
