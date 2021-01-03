@@ -27,7 +27,7 @@ namespace WorkspaceMenu
 	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
 }
 
-FCommonWidget CommonWidget;
+TSharedPtr<FCommonWidget> CommonWidgetPtr;
 
 int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
 {
@@ -53,6 +53,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 	SourceCodeAccessModule.SetAccessor(FName("VisualStudioSourceCodeAccess"));
 #endif
 
+	CommonWidgetPtr = MakeShareable(new FCommonWidget());
+
 	InitApp();
 
 	// loop while the server does the rest
@@ -69,6 +71,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 	FCoreDelegates::OnExit.Broadcast();
 	FSlateApplication::Shutdown();
 	FModuleManager::Get().UnloadModulesAtShutdown();
+	CommonWidgetPtr.Reset();
 	return 0;
 }
 
@@ -102,7 +105,7 @@ TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
 		.Label(WorkspaceMenu::SizeofType->GetDisplayName())
 		.ToolTipText(LOCTEXT("TypeSizeof", "sizeof type"))
 		[
-			CommonWidget.MakeWidget().ToSharedRef()
+			CommonWidgetPtr->MakeWidget().ToSharedRef()
 		];
 }
 
