@@ -89,6 +89,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 		FPlatformProcess::Sleep(0);
 	}
 
+	CommonWidgetPtr.Reset();
+	SplineWidgetPtr.Reset();
+	
 	FCoreDelegates::OnExit.Broadcast();
 	FSlateApplication::Shutdown();
 	FModuleManager::Get().UnloadModulesAtShutdown();
