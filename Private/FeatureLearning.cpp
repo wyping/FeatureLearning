@@ -19,7 +19,14 @@ DEFINE_LOG_CATEGORY_STATIC(LogFeatureLearning, Log, All);
 IMPLEMENT_APPLICATION(FeatureLearning, "FeatureLearning");// 注册模块
 #define LOCTEXT_NAMESPACE "EngineFeature"
 
-
+namespace WorkspaceMenu
+{
+	TSharedRef<FWorkspaceItem> MenuRoot = FWorkspaceItem::NewGroup(LOCTEXT("MenuRoot", "MenuRoot"));
+	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
+	TSharedRef<FWorkspaceItem> SplineWidgetTab = FWorkspaceItem::NewGroup(LOCTEXT("SplineWidgetTab", "SplineWidget"));
+}
+TSharedPtr<FCommonWidget> CommonWidgetPtr;
+TSharedPtr<FSplineWidget> SplineWidgetPtr;
 
 TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
 {
@@ -41,15 +48,7 @@ TSharedRef<SDockTab> SpawnSplineTab(const FSpawnTabArgs& Args)
 		];
 }
 
-namespace WorkspaceMenu
-{
-	TSharedRef<FWorkspaceItem> MenuRoot = FWorkspaceItem::NewGroup(LOCTEXT("MenuRoot", "MenuRoot"));
-	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
-	TSharedRef<FWorkspaceItem> SplineWidgetTab = FWorkspaceItem::NewGroup(LOCTEXT("SplineWidgetTab", "SplineWidget"));
-}
 
-TSharedPtr<FCommonWidget> CommonWidgetPtr;
-TSharedPtr<FSplineWidget> SplineWidgetPtr;
 
 int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
 {

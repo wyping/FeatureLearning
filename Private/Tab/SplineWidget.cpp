@@ -161,6 +161,7 @@ TSharedPtr<SWidget> FSplineWidget::MakeWidget()
 		.AutoHeight()
 		[
 			SAssignNew(SSpineWidget,SSplineWidgetTest)
+			.SpineThickness(this, &FSplineWidget::GetSpineThicknessValue)
 		]
 	;
 }
