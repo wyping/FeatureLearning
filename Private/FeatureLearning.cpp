@@ -9,6 +9,7 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SWindow.h"
 #include "Tab/CommonWidget.h"
+#include "Tab/SplineWidget.h"
 
 void InitApp();
 TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args);
@@ -18,16 +19,37 @@ DEFINE_LOG_CATEGORY_STATIC(LogFeatureLearning, Log, All);
 IMPLEMENT_APPLICATION(FeatureLearning, "FeatureLearning");// 注册模块
 #define LOCTEXT_NAMESPACE "EngineFeature"
 
-
-TSharedRef<SDockTab> SpawnWebBrowserTab(const FSpawnTabArgs& Args);
-
 namespace WorkspaceMenu
 {
+	TSharedRef<FWorkspaceItem> SlateReflector = FWorkspaceItem::NewGroup(LOCTEXT("SlateReflectorTab", "WidgetReflector"));
 	TSharedRef<FWorkspaceItem> MenuRoot = FWorkspaceItem::NewGroup(LOCTEXT("MenuRoot", "MenuRoot"));
 	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
+	TSharedRef<FWorkspaceItem> SplineWidgetTab = FWorkspaceItem::NewGroup(LOCTEXT("SplineWidgetTab", "SplineWidget"));
+}
+TSharedPtr<FCommonWidget> CommonWidgetPtr;
+TSharedPtr<FSplineWidget> SplineWidgetPtr;
+
+TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
+{
+	return SNew(SDockTab)
+		.Label(WorkspaceMenu::SizeofType->GetDisplayName())
+		.ToolTipText(LOCTEXT("TypeSizeof", "sizeof type"))
+		[
+			CommonWidgetPtr->MakeWidget().ToSharedRef()
+		];
 }
 
-TSharedPtr<FCommonWidget> CommonWidgetPtr;
+TSharedRef<SDockTab> SpawnSplineTab(const FSpawnTabArgs& Args)
+{
+	return SNew(SDockTab)
+		.Label(WorkspaceMenu::SplineWidgetTab->GetDisplayName())
+		.ToolTipText(LOCTEXT("SpawnSplineTab", "SpawnSpline"))
+		[
+			SplineWidgetPtr->MakeWidget().ToSharedRef()
+		];
+}
+
+
 
 int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int nCmdShow)
 {
@@ -52,9 +74,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 	IModuleInterface& VisualStudioSourceCodeAccessModule = FModuleManager::LoadModuleChecked<IModuleInterface>(FName("VisualStudioSourceCodeAccess"));
 	SourceCodeAccessModule.SetAccessor(FName("VisualStudioSourceCodeAccess"));
 #endif
+	FModuleManager::LoadModuleChecked<ISlateReflectorModule>("SlateReflector").RegisterTabSpawner(WorkspaceMenu::SlateReflector);
 
 	CommonWidgetPtr = MakeShareable(new FCommonWidget());
-
+	SplineWidgetPtr = MakeShareable(new FSplineWidget());
 	InitApp();
 
 	// loop while the server does the rest
@@ -68,10 +91,12 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 		FPlatformProcess::Sleep(0);
 	}
 
+	CommonWidgetPtr.Reset();
+	SplineWidgetPtr.Reset();
+	
 	FCoreDelegates::OnExit.Broadcast();
 	FSlateApplication::Shutdown();
 	FModuleManager::Get().UnloadModulesAtShutdown();
-	CommonWidgetPtr.Reset();
 	return 0;
 }
 
@@ -80,6 +105,7 @@ void InitApp()
 	// 注册TabSpawner
 	{
 		FGlobalTabmanager::Get()->RegisterTabSpawner(FName(*(WorkspaceMenu::SizeofType->GetDisplayName().ToString())), FOnSpawnTab::CreateStatic(&SpawnSizeofTab));
+		FGlobalTabmanager::Get()->RegisterTabSpawner(FName(*(WorkspaceMenu::SplineWidgetTab->GetDisplayName().ToString())), FOnSpawnTab::CreateStatic(&SpawnSplineTab));
 	}
 
 	// 设置布局文件
@@ -91,22 +117,14 @@ void InitApp()
 			->Split
 			(
 				FTabManager::NewStack()
+				->AddTab(FName(*(WorkspaceMenu::SlateReflector->GetDisplayName().ToString())), ETabState::OpenedTab)
 				->AddTab(FName(*(WorkspaceMenu::SizeofType->GetDisplayName().ToString())), ETabState::OpenedTab)
+				->AddTab(FName(*(WorkspaceMenu::SplineWidgetTab->GetDisplayName().ToString())), ETabState::OpenedTab)
 			)
 		);
 
 	//通过布局文件创建MainWindow
 	FGlobalTabmanager::Get()->RestoreFrom(Layout, TSharedPtr<SWindow>());
-}
-
-TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
-{
-	return SNew(SDockTab)
-		.Label(WorkspaceMenu::SizeofType->GetDisplayName())
-		.ToolTipText(LOCTEXT("TypeSizeof", "sizeof type"))
-		[
-			CommonWidgetPtr->MakeWidget().ToSharedRef()
-		];
 }
 
 #undef LOCTEXT_NAMESPACE
