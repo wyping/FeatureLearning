@@ -21,6 +21,7 @@ IMPLEMENT_APPLICATION(FeatureLearning, "FeatureLearning");// 注册模块
 
 namespace WorkspaceMenu
 {
+	TSharedRef<FWorkspaceItem> SlateReflector = FWorkspaceItem::NewGroup(LOCTEXT("SlateReflectorTab", "WidgetReflector"));
 	TSharedRef<FWorkspaceItem> MenuRoot = FWorkspaceItem::NewGroup(LOCTEXT("MenuRoot", "MenuRoot"));
 	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
 	TSharedRef<FWorkspaceItem> SplineWidgetTab = FWorkspaceItem::NewGroup(LOCTEXT("SplineWidgetTab", "SplineWidget"));
@@ -73,6 +74,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 	IModuleInterface& VisualStudioSourceCodeAccessModule = FModuleManager::LoadModuleChecked<IModuleInterface>(FName("VisualStudioSourceCodeAccess"));
 	SourceCodeAccessModule.SetAccessor(FName("VisualStudioSourceCodeAccess"));
 #endif
+	FModuleManager::LoadModuleChecked<ISlateReflectorModule>("SlateReflector").RegisterTabSpawner(WorkspaceMenu::SlateReflector);
 
 	CommonWidgetPtr = MakeShareable(new FCommonWidget());
 	SplineWidgetPtr = MakeShareable(new FSplineWidget());
@@ -115,6 +117,7 @@ void InitApp()
 			->Split
 			(
 				FTabManager::NewStack()
+				->AddTab(FName(*(WorkspaceMenu::SlateReflector->GetDisplayName().ToString())), ETabState::OpenedTab)
 				->AddTab(FName(*(WorkspaceMenu::SizeofType->GetDisplayName().ToString())), ETabState::OpenedTab)
 				->AddTab(FName(*(WorkspaceMenu::SplineWidgetTab->GetDisplayName().ToString())), ETabState::OpenedTab)
 			)

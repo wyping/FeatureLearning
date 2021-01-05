@@ -1,6 +1,7 @@
 #include "Tab/SplineWidget.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Input/SSpinBox.h"
+#include "Widgets/Input//SComboBox.h"
 DEFINE_LOG_CATEGORY_STATIC(LogSpline, Log, All)
 #define LOCTEXT_NAMESPACE "SplineWidgetTest"
 class SSplineWidgetTest : public SCompoundWidget
@@ -34,6 +35,10 @@ public:
 		BezierPoints[3] = p4;
 	}
 
+	void SetSplineMode(int32 inMode)
+	{
+		SplineMode = inMode;
+	}
 private:
 	virtual int32 OnPaint(const FPaintArgs& Args, 
 		const FGeometry& AllottedGeometry, 
@@ -46,26 +51,52 @@ private:
 		// 画四个控制点
 		for (int index = 0; index < 4; ++ index)
 		{
+			FLinearColor color = FLinearColor::Green;
+			if (SplineMode == 0)
+			{
+				color = index < 2 == 0 ? FLinearColor::Green : FLinearColor::Red;
+			}
+			else
+			{
+				color = (index == 0 || index == 3) ? FLinearColor::Green : FLinearColor::Red;
+			}
 			FSlateDrawElement::MakeBox(
 				OutDrawElements,
 				LayerId,
 				AllottedGeometry.ToPaintGeometry(BezierPointRadius,FSlateLayoutTransform(1.0f, BezierPoints[index])),
 				&WhiteBox,
 				bParentEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect,
-				FLinearColor::Green
+				color
 			);
 		}
 		// 画Spine
 		++LayerId;
-		FSlateDrawElement::MakeCubicBezierSpline(
-			OutDrawElements,
-			LayerId,
-			AllottedGeometry.ToPaintGeometry(),
-			BezierPoints[0], BezierPoints[1], BezierPoints[2], BezierPoints[3],
-			ThicknessValue.Get() * AllottedGeometry.Scale,
-			bParentEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect,
-			FColor::White
-		);
+		if (SplineMode == 1)
+		{
+			FSlateDrawElement::MakeCubicBezierSpline(
+				OutDrawElements,
+				LayerId,
+				AllottedGeometry.ToPaintGeometry(),
+				BezierPoints[0], BezierPoints[1], BezierPoints[2], BezierPoints[3],
+				ThicknessValue.Get() * AllottedGeometry.Scale,
+				bParentEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect,
+				FColor::White
+			);
+		}
+		else
+		{
+			FSlateDrawElement::MakeSpline(OutDrawElements,
+				LayerId,
+				AllottedGeometry.ToPaintGeometry(),
+				(BezierPoints[1] + BezierPoints[0]) * 0.5,
+				BezierPoints[1]-BezierPoints[0],
+				(BezierPoints[3] + BezierPoints[2]) * 0.5,
+				BezierPoints[3] - BezierPoints[2],
+				ThicknessValue.Get() * AllottedGeometry.Scale,
+				bParentEnabled ? ESlateDrawEffect::None : ESlateDrawEffect::DisabledEffect,
+				FColor::White
+			);
+		}
 		return SCompoundWidget::OnPaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
 	}
 
@@ -99,7 +130,7 @@ private:
 
 	virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 	{
-		if (DragIndex != INDEX_NONE && MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+		if (DragIndex != INDEX_NONE)
 		{
 			const FVector2D  curLocalMousLoc = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
 			BezierPoints[DragIndex] = curLocalMousLoc;
@@ -120,15 +151,22 @@ private:
 		}
 		return INDEX_NONE;
 	}
-
 private:
 	FVector2D BezierPoints[4];
 	TAttribute<float> ThicknessValue;
 	FSlateColorBrush WhiteBox = FSlateColorBrush(FColor::White);
 	int32 DragIndex = INDEX_NONE;
+	int32 SplineMode = 0;
 	const FVector2D BezierPointRadius = FVector2D(8, 8); // 控制点大小 X:长，Y：宽
 };
 
+
+FSplineWidget::FSplineWidget()
+{
+	SplineMode.Empty();
+	SplineMode.Add(MakeShareable(new FString(TEXT("Hermite Spline"))));
+	SplineMode.Add(MakeShareable(new FString(TEXT("Bezier Spline"))));
+}
 
 TSharedPtr<SWidget> FSplineWidget::MakeWidget()
 {
@@ -140,11 +178,22 @@ TSharedPtr<SWidget> FSplineWidget::MakeWidget()
 			+SHorizontalBox::Slot()
 			.FillWidth(1)
 			[
-				SNew(SSpinBox<float>)
-				.MinValue(0.1f)
-				.MaxValue(10.0f)
-				.Value(this,&FSplineWidget::GetSpineThicknessValue)
-				.OnValueChanged(this,&FSplineWidget::OnSpineThicknesChanged)
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				[
+					SNew(STextBlock)
+					.Text(LOCTEXT("Thickness","粗细"))
+				]
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				[
+					SNew(SSpinBox<float>)
+					.MinValue(0.1f)
+					.MaxValue(10.0f)
+					.Value(this,&FSplineWidget::GetSpineThicknessValue)
+					.OnValueChanged(this,&FSplineWidget::OnSpineThicknesChanged)
+				]
 			]
 			+ SHorizontalBox::Slot()
 			[
@@ -156,12 +205,31 @@ TSharedPtr<SWidget> FSplineWidget::MakeWidget()
 					return FReply::Handled();
 				})
 			]
+			+ SHorizontalBox::Slot()
+			[
+				SNew(SComboBox<TSharedPtr<FString>>)
+				.OptionsSource(&this->SplineMode)
+				.OnSelectionChanged(this, &FSplineWidget::OnSelectSplineMode)
+				.OnGenerateWidget_Lambda([](TSharedPtr<FString> value)->TSharedRef<SWidget>
+				{
+					return SNew(STextBlock).Text(FText::FromString(*value)); // 下拉项的Widget
+				})
+				[
+					SNew(STextBlock)
+					.Text(this,&FSplineWidget::OnGetSplineModeText) //ComboButton项
+				]
+
+			]
 		]
 		+ SVerticalBox::Slot()
-		.AutoHeight()
+		//.AutoHeight()
+		.FillHeight(1.0f)// 如果是AutoHight，窗口太小
 		[
-			SAssignNew(SSpineWidget,SSplineWidgetTest)
-			.SpineThickness(this, &FSplineWidget::GetSpineThicknessValue)
+			SNew(SBorder)
+			[
+				SAssignNew(SSpineWidget,SSplineWidgetTest)
+				.SpineThickness(this, &FSplineWidget::GetSpineThicknessValue)
+			]
 		]
 	;
 }
@@ -176,5 +244,16 @@ void FSplineWidget::OnSpineThicknesChanged(float inNewValue)
 	Thickness = inNewValue;
 }
 
+
+FText FSplineWidget::OnGetSplineModeText() const
+{
+	return FText::FromString(*SplineMode[SelectSplineModeIndex]);
+}
+
+void FSplineWidget::OnSelectSplineMode(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo)
+{
+	SelectSplineModeIndex = SplineMode.Find(NewSelection);
+	SSpineWidget->SetSplineMode(SelectSplineModeIndex);
+}
 
 #undef LOCTEXT_NAMESPACE
