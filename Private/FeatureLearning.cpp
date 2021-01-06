@@ -10,7 +10,7 @@
 #include "Widgets/SWindow.h"
 #include "Tab/CommonWidget.h"
 #include "Tab/SplineWidget.h"
-
+#include "MenuTest.h"
 void InitApp();
 TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args);
 
@@ -19,27 +19,69 @@ DEFINE_LOG_CATEGORY_STATIC(LogFeatureLearning, Log, All);
 IMPLEMENT_APPLICATION(FeatureLearning, "FeatureLearning");// 注册模块
 #define LOCTEXT_NAMESPACE "EngineFeature"
 
+TSharedPtr<FCommonWidget> CommonWidgetPtr;
+TSharedPtr<FSplineWidget> SplineWidgetPtr;
+TSharedPtr<FMenuWidget> MenuWidgetPtr;
 namespace WorkspaceMenu
 {
-	TSharedRef<FWorkspaceItem> SlateReflector = FWorkspaceItem::NewGroup(LOCTEXT("SlateReflectorTab", "WidgetReflector"));
 	TSharedRef<FWorkspaceItem> MenuRoot = FWorkspaceItem::NewGroup(LOCTEXT("MenuRoot", "MenuRoot"));
+	TSharedRef<FWorkspaceItem> SlateReflector = FWorkspaceItem::NewGroup(LOCTEXT("SlateReflectorTab", "WidgetReflector"));
 	TSharedRef<FWorkspaceItem> SizeofType = FWorkspaceItem::NewGroup(LOCTEXT("SizeofTypeTab", "SizeofType"));
 	TSharedRef<FWorkspaceItem> SplineWidgetTab = FWorkspaceItem::NewGroup(LOCTEXT("SplineWidgetTab", "SplineWidget"));
 }
-TSharedPtr<FCommonWidget> CommonWidgetPtr;
-TSharedPtr<FSplineWidget> SplineWidgetPtr;
 
-TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> SpawnSystemMenu(const FSpawnTabArgs& Args)
+{
+	FMenuBarBuilder MenuBarBuilder = FMenuBarBuilder(TSharedPtr<FUICommandList>());
+	MenuBarBuilder.AddPullDownMenu(
+		NSLOCTEXT("Feature", "WindowMenuLabel", "Window"),
+		FText::GetEmpty(),
+		FNewMenuDelegate::CreateSP(FGlobalTabmanager::Get(), &FTabManager::PopulateTabSpawnerMenu, WorkspaceMenu::MenuRoot)
+	);
+
+	return SNew(SDockTab)
+		.Label(WorkspaceMenu::MenuRoot->GetDisplayName())
+		.ToolTipText(LOCTEXT("System", "sizeof type"))
+		[
+			SNew(SVerticalBox)
+			+SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				MenuBarBuilder.MakeWidget() //建立菜单项
+			]
+			+SVerticalBox::Slot()
+			.FillHeight(1.0f)
+			[
+				SNew(STextBlock).Text(LOCTEXT("TestMenu","Menu Content"))
+			]
+		];
+}
+
+TSharedRef<SDockTab> _StaticSpawnSizeofTab()
 {
 	return SNew(SDockTab)
 		.Label(WorkspaceMenu::SizeofType->GetDisplayName())
 		.ToolTipText(LOCTEXT("TypeSizeof", "sizeof type"))
 		[
-			CommonWidgetPtr->MakeWidget().ToSharedRef()
+			SNew(SVerticalBox)
+			+SVerticalBox::Slot()
+			.AutoHeight()
+			[
+				MenuWidgetPtr->MakeMenuBar().ToSharedRef()//建立菜单项
+			]
+			+SVerticalBox::Slot()
+			.FillHeight(1.0f)
+			[
+				CommonWidgetPtr->MakeWidget().ToSharedRef()
+			]
 		];
 }
+TSharedRef<SDockTab> SpawnSizeofTab(const FSpawnTabArgs& Args)
+{
+	return _StaticSpawnSizeofTab();
+}
 
-TSharedRef<SDockTab> SpawnSplineTab(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> _StaticSpawnSplineTab()
 {
 	return SNew(SDockTab)
 		.Label(WorkspaceMenu::SplineWidgetTab->GetDisplayName())
@@ -47,6 +89,10 @@ TSharedRef<SDockTab> SpawnSplineTab(const FSpawnTabArgs& Args)
 		[
 			SplineWidgetPtr->MakeWidget().ToSharedRef()
 		];
+}
+TSharedRef<SDockTab> SpawnSplineTab(const FSpawnTabArgs& Args)
+{
+	return _StaticSpawnSplineTab();
 }
 
 
@@ -93,7 +139,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 	CommonWidgetPtr.Reset();
 	SplineWidgetPtr.Reset();
-	
 	FCoreDelegates::OnExit.Broadcast();
 	FSlateApplication::Shutdown();
 	FModuleManager::Get().UnloadModulesAtShutdown();
@@ -102,8 +147,20 @@ int WINAPI WinMain(_In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 void InitApp()
 {
+	//初始化菜单项
+	MenuWidgetPtr = MakeShareable(new FMenuWidget);
+	FTest1MenuCommands::Register();
+	MenuWidgetPtr->CommandList->MapAction(FTest1MenuCommands::Get().Menu1, FExecuteAction::CreateLambda([]() {UE_LOG(LogFeatureLearning, Warning, TEXT("Click Menu1")); }));
+	MenuWidgetPtr->CommandList->MapAction(FTest1MenuCommands::Get().Menu2, FExecuteAction::CreateLambda([]() {UE_LOG(LogFeatureLearning, Warning, TEXT("Click Menu2")); }));
+	MenuWidgetPtr->CommandList->MapAction(FTest1MenuCommands::Get().Menu3, 
+		FExecuteAction::CreateLambda([]() {UE_LOG(LogFeatureLearning, Warning, TEXT("Click Menu3")); MenuWidgetPtr->MenuChecked = !MenuWidgetPtr->MenuChecked; }),//点击菜单项，绑定处理函数
+		FCanExecuteAction::CreateLambda([](){return true; }),
+		FIsActionChecked::CreateLambda([]() {return MenuWidgetPtr->MenuChecked; })//菜单项上的CheckBox是否勾选
+	);
+
 	// 注册TabSpawner
 	{
+		FGlobalTabmanager::Get()->RegisterTabSpawner(FName(*(WorkspaceMenu::MenuRoot->GetDisplayName().ToString())), FOnSpawnTab::CreateStatic(&SpawnSystemMenu));
 		FGlobalTabmanager::Get()->RegisterTabSpawner(FName(*(WorkspaceMenu::SizeofType->GetDisplayName().ToString())), FOnSpawnTab::CreateStatic(&SpawnSizeofTab));
 		FGlobalTabmanager::Get()->RegisterTabSpawner(FName(*(WorkspaceMenu::SplineWidgetTab->GetDisplayName().ToString())), FOnSpawnTab::CreateStatic(&SpawnSplineTab));
 	}
@@ -113,17 +170,16 @@ void InitApp()
 		->AddArea
 		(
 			FTabManager::NewArea(1920,1080)
-			->SetWindow(FVector2D(420, 10), false)
 			->Split
 			(
 				FTabManager::NewStack()
+				->SetHideTabWell(true)
 				->AddTab(FName(*(WorkspaceMenu::SlateReflector->GetDisplayName().ToString())), ETabState::OpenedTab)
 				->AddTab(FName(*(WorkspaceMenu::SizeofType->GetDisplayName().ToString())), ETabState::OpenedTab)
 				->AddTab(FName(*(WorkspaceMenu::SplineWidgetTab->GetDisplayName().ToString())), ETabState::OpenedTab)
+				->AddTab(FName(*(WorkspaceMenu::MenuRoot->GetDisplayName().ToString())), ETabState::OpenedTab)
 			)
 		);
-
-	//通过布局文件创建MainWindow
 	FGlobalTabmanager::Get()->RestoreFrom(Layout, TSharedPtr<SWindow>());
 }
 
