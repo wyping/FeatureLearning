@@ -2,6 +2,7 @@
 #include "Styling/SlateStyleRegistry.h"
 #include "Styling/SlateStyle.h"
 #include "Widgets/Input/SButton.h"
+#include "Framework/Commands/UIAction.h"
 DEFINE_LOG_CATEGORY_STATIC(LogMenuTest, Log, All);
 #define LOCTEXT_NAMESPACE "MenuFeature"
 
@@ -13,14 +14,33 @@ DEFINE_LOG_CATEGORY_STATIC(LogMenuTest, Log, All);
 class FFeatureStyle : public FSlateStyleSet
 {
 public:
-	FFeatureStyle() : FSlateStyleSet("FFeatureStyle")
+	FFeatureStyle() : FSlateStyleSet("FeatureStyle")
 	{
+		this->SetContentRoot(FPaths::EngineDir() / TEXT("Source/Programs/FeatureLearning/Resources"));
 		const FVector2D Icon64x64(64.0f, 64.0f);
 		const FVector2D Icon40x40(40.0f, 40.0f);
 		const FVector2D Icon16x16(16.0f, 16.0f);
-		Set("FeatureStyle.LuaIcon_64x", new IMAGE_BRUSH("LuaIcon_64x", Icon64x64));
-		Set("FeatureStyle.LuaIcon_40x", new IMAGE_BRUSH("LuaIcon_64x", Icon40x40));
-		Set("FeatureStyle.LuaIcon_16x", new IMAGE_BRUSH("LuaIcon_64x", Icon16x16));
+		
+		const FLinearColor NormalColor(FColor(0xffeff3f3));
+		const FLinearColor SelectedColor(FColor(0xffdbe4d5));
+		const FLinearColor HoverColor(FColor(0xffdbe4e4));
+		const FLinearColor DisabledColor(FColor(0xaaaaaa));
+		const FLinearColor TextColor(FColor(0xff2c3e50));
+
+		Set("commands.Menu1", new IMAGE_BRUSH("LuaIcon_64x", Icon64x64));
+		Set("commands.Menu2", new IMAGE_BRUSH("LuaIcon_64x", Icon40x40));
+		Set("commands.Menu3", new IMAGE_BRUSH("LuaIcon_64x", Icon16x16));
+		Set("TestIcon.Btn", new IMAGE_BRUSH("UE4Icon", Icon64x64));
+
+		const FButtonStyle Button = FButtonStyle()
+			.SetNormal(BOX_BRUSH("UE4Icon", Icon64x64, FMargin(1), NormalColor))
+			.SetHovered(BOX_BRUSH("UE4Icon", Icon64x64, FMargin(1), HoverColor))
+			.SetPressed(BOX_BRUSH("UE4Icon", Icon64x64, FMargin(1), SelectedColor))
+			.SetNormalPadding(FMargin(2, 2, 2, 2))
+			.SetPressedPadding(FMargin(2, 3, 2, 1));
+		Set("TestIcon.Btn", Button);
+
+		
 		FSlateStyleRegistry::RegisterSlateStyle(*this);
 	}
 	~FFeatureStyle()
@@ -31,8 +51,7 @@ public:
 	{
 		if (!Style.IsValid())
 		{
-			Style = MakeShareable(new FSlateStyleSet("TestStyle"));
-			Style->SetContentRoot(FPaths::EngineDir() / TEXT("Source/Programs/FeatureLearning/Resources"));
+			Style = MakeShareable(new FFeatureStyle());
 		}
 		return *Style;
 	}
@@ -62,17 +81,16 @@ void FTest1MenuCommands::RegisterCommands()
 FMenuWidget::FMenuWidget() :
 	CommandList(new FUICommandList())
 {
-
 }
 
-TSharedPtr<SWidget> FMenuWidget::MakeMenu()
+TSharedRef<SWidget> FMenuWidget::MakeMenuBar()
 {
-	return MakeMenuBar();
-}
+	TSharedRef<FExtender> Extender(MakeShareable(new FExtender));
+	Extender->AddMenuExtension("Section4", EExtensionHook::After, this->CommandList, FMenuExtensionDelegate::CreateStatic(&FMenuWidget::FillToolbar));
 
-TSharedPtr<SWidget> FMenuWidget::MakeMenuBar()
-{
 	FMenuBarBuilder MenuBuilder(CommandList);
+	MenuBuilder.PushExtender(Extender);
+
 	MenuBuilder.AddPullDownMenu(
 		LOCTEXT("Menu1", "CustomMenu"),
 		LOCTEXT("Menu1 tip", "Menu 1 tips"),
@@ -98,7 +116,8 @@ TSharedPtr<SWidget> FMenuWidget::MakeMenuBar()
 				SNew(SButton)
 				.OnClicked_Lambda([]()->FReply { UE_LOG(LogMenuTest, Warning, TEXT("Widget clicked!")); return FReply::Handled(); })
 				.Text(LOCTEXT("Widget1", "BtnTest"))
-				, LOCTEXT("Widget", "Widget Test"));
+				.ButtonStyle(FFeatureStyle::Get(),"TestIcon.Btn")
+				,LOCTEXT("Widget", "Widget Test"));
 			MenuBuilder.AddWidget(SNew(STextBlock).Text(LOCTEXT("WidgetText", "Key1")), LOCTEXT("WidgetText", "WidgetText tips"));
 		}
 		MenuBuilder.EndSection();
@@ -115,17 +134,53 @@ TSharedPtr<SWidget> FMenuWidget::MakeMenuBar()
 		MenuBuilder.EndSection();
 	})
 	);
+
 	return MenuBuilder.MakeWidget();
 }
 
-TSharedPtr<SWidget> FMenuWidget::MakeToolBar()
+TSharedRef<SWidget> FMenuWidget::MakeToolBar()
 {
-	return MakeMenuBar();
+	FToolBarBuilder ToolsToolbar(CommandList, FMultiBoxCustomization::None);
+	ToolsToolbar.BeginSection("Extension1");
+	ToolsToolbar.AddToolBarButton(FTest1MenuCommands::Get().Menu1);
+	ToolsToolbar.AddToolBarButton(FTest1MenuCommands::Get().Menu2);
+	ToolsToolbar.AddToolBarButton(FTest1MenuCommands::Get().Menu3);
+	ToolsToolbar.EndSection();
+
+	ToolsToolbar.BeginSection("Extension2");
+	ToolsToolbar.AddToolBarWidget(
+		SNew(SButton)
+		.OnClicked_Lambda([]()->FReply { UE_LOG(LogMenuTest, Warning, TEXT("Widget clicked!")); return FReply::Handled(); })
+		.Text(LOCTEXT("Widget1", "BtnTest"))
+		.ButtonStyle(FFeatureStyle::Get(), "TestIcon.Btn")
+		,LOCTEXT("EditableItem_Click", "Click Me")
+	);
+	ToolsToolbar.AddEditableText(LOCTEXT("EditableItem1", "Editable Item1"), LOCTEXT("EditableItem_ToolTip", "You can edit this item's text"), FSlateIcon(), LOCTEXT("DefaultEditableText1", "Edit Me too!"));
+	ToolsToolbar.AddToolBarWidget(SNew(SCheckBox), LOCTEXT("EditableItem_CheckBox", "Check Me"));
+	
+	FUIAction uiAction;
+	uiAction.ExecuteAction = FExecuteAction::CreateLambda([](){ UE_LOG(LogMenuTest, Warning, TEXT("Widget clicked!"));});
+	ToolsToolbar.AddComboButton(uiAction,FOnGetContent::CreateSP(this,&FMenuWidget::MakeMenuBar), LOCTEXT("EditableItem_ComboButton", "ComboButton"));
+	ToolsToolbar.EndSection();
+
+	return ToolsToolbar.MakeWidget();
 }
+
+//TSharedRef<SWidget> FMenuWidget::MakeWithExtender()
+//{
+//
+//	return MenuBuilder.MakeWidget();
+//}
 
 void FMenuWidget::MakeSubMenu(FMenuBuilder& MenuBuilder)
 {
 	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu3);
+	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu2);
+	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu1);
+}
+
+void FMenuWidget::FillToolbar(FMenuBuilder& MenuBuilder)
+{
 	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu2);
 	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu1);
 }

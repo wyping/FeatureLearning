@@ -25,14 +25,13 @@ class FMenuWidget : public TSharedFromThis<FMenuWidget>
 public:
 	FMenuWidget();
 public:
-	TSharedPtr<SWidget> MakeMenu();
-	TSharedPtr<SWidget> MakeMenuBar();
-	TSharedPtr<SWidget> MakeToolBar();
-
+	TSharedRef<SWidget> MakeMenuBar();
+	TSharedRef<SWidget> MakeToolBar();
+	//TSharedRef<SWidget> MakeWithExtender();
 private:
 	static void MakeSubMenu(class FMenuBuilder &MenuBuilder);
+	static void FillToolbar(class FMenuBuilder& MenuBuilder);
 public:
 	TSharedRef<FUICommandList> CommandList;
-
 	bool MenuChecked = false;
 };

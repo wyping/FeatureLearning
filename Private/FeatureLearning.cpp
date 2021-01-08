@@ -48,6 +48,7 @@ TSharedRef<SDockTab> SpawnSystemMenu(const FSpawnTabArgs& Args)
 			.AutoHeight()
 			[
 				MenuBarBuilder.MakeWidget() //建立菜单项
+
 			]
 			+SVerticalBox::Slot()
 			.FillHeight(1.0f)
@@ -67,7 +68,22 @@ TSharedRef<SDockTab> _StaticSpawnSizeofTab()
 			+SVerticalBox::Slot()
 			.AutoHeight()
 			[
-				MenuWidgetPtr->MakeMenuBar().ToSharedRef()//建立菜单项
+				SNew(SHorizontalBox)
+				+SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					MenuWidgetPtr->MakeMenuBar()//建立菜单项
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					MenuWidgetPtr->MakeToolBar()//建立ToolBar
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				[
+					SNew(STextBlock).Text(LOCTEXT("MenuSeperate","Seperate"))
+				]
 			]
 			+SVerticalBox::Slot()
 			.FillHeight(1.0f)
