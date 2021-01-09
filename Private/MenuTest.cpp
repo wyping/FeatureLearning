@@ -31,6 +31,8 @@ public:
 		Set("commands.Menu2", new IMAGE_BRUSH("LuaIcon_64x", Icon40x40));
 		Set("commands.Menu3", new IMAGE_BRUSH("LuaIcon_64x", Icon16x16));
 		Set("TestIcon.Btn", new IMAGE_BRUSH("UE4Icon", Icon64x64));
+		Set("commands.Extender1", new IMAGE_BRUSH("UE4Icon", Icon64x64));
+		Set("commands.Extender2", new IMAGE_BRUSH("UE4Icon", Icon64x64));  
 
 		const FButtonStyle Button = FButtonStyle()
 			.SetNormal(BOX_BRUSH("UE4Icon", Icon64x64, FMargin(1), NormalColor))
@@ -76,6 +78,8 @@ void FTest1MenuCommands::RegisterCommands()
 	UI_COMMAND(Menu1, "Menu1", "Menu1 tip", EUserInterfaceActionType::ToggleButton, FInputChord());
 	UI_COMMAND(Menu2, "Menu2", "Menu2 tip", EUserInterfaceActionType::ToggleButton, FInputChord(EModifierKey::Alt, EKeys::Q));// 配置快捷键，Alt + Q
 	UI_COMMAND(Menu3, "Menu3", "Menu3 tip", EUserInterfaceActionType::ToggleButton, FInputChord());
+	UI_COMMAND(Extender1, "Extender1", "Extender1", EUserInterfaceActionType::ToggleButton, FInputChord());
+	UI_COMMAND(Extender2, "Extender2", "Extender2", EUserInterfaceActionType::ToggleButton, FInputChord());
 }
 
 FMenuWidget::FMenuWidget() :
@@ -86,7 +90,8 @@ FMenuWidget::FMenuWidget() :
 TSharedRef<SWidget> FMenuWidget::MakeMenuBar()
 {
 	TSharedRef<FExtender> Extender(MakeShareable(new FExtender));
-	Extender->AddMenuExtension("Section4", EExtensionHook::After, this->CommandList, FMenuExtensionDelegate::CreateStatic(&FMenuWidget::FillToolbar));
+	//在拓展点 Section3之后插入两个菜单项
+	Extender->AddMenuExtension("Section3", EExtensionHook::After, this->CommandList, FMenuExtensionDelegate::CreateStatic(&FMenuWidget::FillExtenderMenu));
 
 	FMenuBarBuilder MenuBuilder(CommandList);
 	MenuBuilder.PushExtender(Extender);
@@ -141,6 +146,13 @@ TSharedRef<SWidget> FMenuWidget::MakeMenuBar()
 TSharedRef<SWidget> FMenuWidget::MakeToolBar()
 {
 	FToolBarBuilder ToolsToolbar(CommandList, FMultiBoxCustomization::None);
+
+	TSharedRef<FExtender> Extender(MakeShareable(new FExtender));
+	//在Extension1之前追加两项
+	Extender->AddToolBarExtension("Extension1", EExtensionHook::Before, this->CommandList, FToolBarExtensionDelegate::CreateStatic(&FMenuWidget::FillExtenderToobar));
+	
+	ToolsToolbar.PushExtender(Extender);
+
 	ToolsToolbar.BeginSection("Extension1");
 	ToolsToolbar.AddToolBarButton(FTest1MenuCommands::Get().Menu1);
 	ToolsToolbar.AddToolBarButton(FTest1MenuCommands::Get().Menu2);
@@ -179,10 +191,16 @@ void FMenuWidget::MakeSubMenu(FMenuBuilder& MenuBuilder)
 	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu1);
 }
 
-void FMenuWidget::FillToolbar(FMenuBuilder& MenuBuilder)
+void FMenuWidget::FillExtenderMenu(FMenuBuilder& MenuBuilder)
 {
-	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu2);
-	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Menu1);
+	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Extender2);
+	MenuBuilder.AddMenuEntry(FTest1MenuCommands::Get().Extender1);
+}
+
+void FMenuWidget::FillExtenderToobar(class FToolBarBuilder& ToolBarBuilder)
+{
+	ToolBarBuilder.AddToolBarButton(FTest1MenuCommands::Get().Extender1);
+	ToolBarBuilder.AddToolBarButton(FTest1MenuCommands::Get().Extender2);
 }
 
 #undef LOCTEXT_NAMESPACE

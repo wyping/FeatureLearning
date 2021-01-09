@@ -9,6 +9,8 @@ public:
 	TSharedPtr<FUICommandInfo> Menu1;
 	TSharedPtr<FUICommandInfo> Menu2;
 	TSharedPtr<FUICommandInfo> Menu3;
+	TSharedPtr<FUICommandInfo> Extender1;
+	TSharedPtr<FUICommandInfo> Extender2;
 };
 
 // FUICommandList : 指令与执行（响应函数的之间的建立映射关系）
@@ -30,7 +32,8 @@ public:
 	//TSharedRef<SWidget> MakeWithExtender();
 private:
 	static void MakeSubMenu(class FMenuBuilder &MenuBuilder);
-	static void FillToolbar(class FMenuBuilder& MenuBuilder);
+	static void FillExtenderMenu(class FMenuBuilder& MenuBuilder);
+	static void FillExtenderToobar(class FToolBarBuilder& ToolBarBuilder);
 public:
 	TSharedRef<FUICommandList> CommandList;
 	bool MenuChecked = false;
